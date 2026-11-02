@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-# ページの設定（スマホでも見やすいワイド表示）
+# ページの設定
 st.set_page_config(
     page_title="DIAF_OUNA_ANALYSER", page_icon="🎰", layout="centered"
 )
@@ -31,12 +31,6 @@ h1, h2, h3 {
     padding-bottom: 8px;
     margin-bottom: 12px;
     text-transform: uppercase;
-}
-
-/* テーブル全体のデザイン調整 */
-div[data-testid="stTable"] {
-    background-color: #222222;
-    border: 1px solid #333333;
 }
 </style>
 """,
@@ -229,46 +223,36 @@ data = {
 
 df = pd.DataFrame(data)
 
-# サイドバーまたは画面上のセレクトボックスで絞り込み
+# セレクトボックス
 col1, col2 = st.columns(2)
 with col1:
     cat_select = st.selectbox(
-        "CAT (カテゴリ)", ["すべて"] + list(df["カテゴリ"].unique())
+        "CAT", ["すべて"] + list(df["カテゴリ"].unique())
     )
 
 with col2:
-    # 選択されたカテゴリに応じて機種リストを絞り込み
     if cat_select != "すべて":
         available_machines = list(
             df[df["カテゴリ"] == cat_select]["機種名"].unique()
         )
     else:
         available_machines = list(df["機種名"].unique())
+    mach_select = st.selectbox("MODEL", ["すべて"] + available_machines)
 
-    mach_select = st.selectbox("MODEL (機種名)", ["すべて"] + available_machines)
-
-# データのフィルタリング
+# フィルタリング
 filtered_df = df.copy()
 if cat_select != "すべて":
     filtered_df = filtered_df[filtered_df["カテゴリ"] == cat_select]
 if mach_select != "すべて":
     filtered_df = filtered_df[filtered_df["機種名"] == mach_select]
 
-st.write(f"**該当台数: {len(filtered_df)} 台**")
+st.markdown(
+    f"<p style='color: #ff6600;'>// 該当台数: {len(filtered_df)} 台</p>",
+    unsafe_allow_html=True,
+)
 
-
-# ハイライト（色分け）用のスタイル関数
-def color_coding(row):
-    if row["差枚数"] >= 2500 and row["総回転数"] >= 7000:
-        return [
-            "background-color: #3b1c1c; color: #ff9999; font-weight: bold;"
-        ] * len(row)  # 高設定濃厚
-    elif row["差枚数"] >= 1000:
-        return ["background-color: #383319; color: #ffeb99;"] * len(
-            row
-        )  # 期待
-    elif row["差枚数"] <= -1500:
-        return ["background-color: #1a273b; color: #99ccff;"] * len(
-            row
-        )  # マイナス
-    
+# テーブルを確実に表示するシンプルな描画
+if not filtered_df.empty:
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+else:
+    st.info("データがありません。")
