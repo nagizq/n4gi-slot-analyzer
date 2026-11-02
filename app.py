@@ -6,7 +6,7 @@ st.set_page_config(
     page_title="DIAF_OUNA_ANALYSER", page_icon="🎰", layout="centered"
 )
 
-# Teenage Engineering風デザインのCSS
+# Teenage Engineering風デザインのCSS（レトロフューチャー・ガジェット感）
 st.markdown(
     """
 <style>
@@ -36,10 +36,30 @@ h1, h2, h3 {
 .trend-box {
     background-color: #262626;
     border-left: 4px solid #ff6600;
-    padding: 10px;
+    padding: 12px;
     font-size: 13px;
     margin-bottom: 15px;
     color: #ffcc99;
+    line-height: 1.5;
+}
+
+/* 1台ごとのカードデザイン（手書き風・レトロガジェット感） */
+.unit-card {
+    background-color: #222222;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.unit-header {
+    font-size: 14px;
+    color: #ff6600;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.unit-info {
+    font-size: 12px;
+    color: #cccccc;
 }
 </style>
 """,
@@ -52,7 +72,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 1. 拡張データ（日付、CZ確率、AT確率、差枚数など）
+# 1. 複数機種のデータ（スマスロ・Aタイプを網羅）
 data = {
     "日付": [
         "2026-11-02",
@@ -63,14 +83,29 @@ data = {
         "2026-11-02",
         "2026-11-02",
         "2026-11-02",
+        "2026-11-02",
+        "2026-11-02",
     ],
-    "台番": [601, 602, 603, 604, 501, 502, 511, 521],
+    "台番": [
+        601,
+        602,
+        603,
+        604,
+        611,
+        621,
+        631,
+        501,
+        511,
+        521,
+    ],
     "カテゴリ": [
         "スマスロ",
         "スマスロ",
         "スマスロ",
         "スマスロ",
-        "Aタイプ",
+        "スマスロ",
+        "スマスロ",
+        "スマスロ",
         "Aタイプ",
         "Aタイプ",
         "Aタイプ",
@@ -80,39 +115,43 @@ data = {
         "甲鉄城のカバネリ海門決戦",
         "甲鉄城のカバネリ海門決戦",
         "甲鉄城のカバネリ海門決戦",
-        "マイジャグラーV",
+        "東京喰種",
+        "ゴッドイーター",
+        "ヴァルヴレイヴ2",
         "マイジャグラーV",
         "ゴーゴージャグラー3",
         "ファンキージャグラー2",
     ],
-    "総回転数": [9200, 4800, 7800, 8600, 8400, 6200, 7100, 8900],
-    "差枚数": [4500, -1900, 2400, 5200, 3100, -800, 1800, 3800],
-    "CZ確率": [
-        "1/112",
-        "1/240",
-        "1/145",
-        "1/108",
-        "-",
-        "-",
-        "-",
-        "-",
-    ],  # スマスロ用
-    "BB/AT確率": [
-        "1/280",
-        "1/520",
-        "1/310",
-        "1/265",
-        "BB 1/230 / RB 1/250",
-        "BB 1/310 / RB 1/340",
-        "BB 1/240 / RB 1/270",
-        "BB 1/220 / RB 1/260",
+    "総回転数": [
+        9200,
+        4800,
+        7800,
+        8600,
+        5400,
+        8100,
+        8900,
+        8400,
+        7100,
+        8900,
     ],
-    "設定期待度": ["高設定濃厚🔥", "低設定", "中〜高期待", "高設定濃厚🔥", "高設定濃厚🔥", "低設定", "中期待", "高設定濃厚🔥"],
+    "差枚数": [
+        4500,
+        -1900,
+        2400,
+        5200,
+        -1200,
+        3100,
+        6100,
+        3100,
+        1800,
+        3800,
+    ],
+    "強弱判定": ["強 🔥", "弱 💧", "中 ⚡", "強 🔥", "弱 💧", "中 ⚡", "強 🔥", "強 🔥", "中 ⚡", "強 🔥"],
 }
 
 df = pd.DataFrame(data)
 
-# サイドバーや選択UI
+# 選択UI
 col1, col2, col3 = st.columns(3)
 with col1:
     date_select = st.selectbox("DATE", ["すべて"] + list(df["日付"].unique()))
@@ -138,27 +177,67 @@ if cat_select != "すべて":
 if mach_select != "すべて":
     filtered_df = filtered_df[filtered_df["機種名"] == mach_select]
 
-# 2. 複数台の傾向・クセの表示（トレンド分析）
+# 2. 自動統計データの計算
+total_units = len(filtered_df)
+if total_units > 0:
+    avg_diff = int(filtered_df["差枚数"].mean())
+    win_count = len(filtered_df[filtered_df["差枚数"] > 0])
+    win_rate = (win_count / total_units) * 100
+    max_diff = filtered_df["差枚数"].max()
+else:
+    avg_diff, win_rate, max_diff = 0, 0, 0
+
+# 統計情報の表示
 st.markdown(
-    """
+    f"""
 <div class="trend-box">
+<b>【自動統計サマリー】</b><br>
+・対象台数: <b>{total_units} 台</b> ｜ 勝率: <b>{win_rate:.1f}%</b><br>
+・平均差枚: <b>{avg_diff:+d} 枚</b> ｜ 最高差枚: <b>{max_diff:+d} 枚</b><br>
+<hr style="border:0; border-top:1px dashed #444; margin:8px 0;">
 <b>【本日のホール傾向分析】</b><br>
-・角台（601番や各シマの端）に高設定が寄る傾向あり。<br>
-・カバネリ海門決戦は並びで強い挙動を確認。全体的にベースが高め。
+・角台（各シマの端）に高設定が寄る傾向あり。<br>
+・全体的にベースが高めの配分。
 </div>
 """,
     unsafe_allow_html=True,
 )
 
-st.markdown(
-    f"<p style='color: #ff6600;'>// 該当台数: {len(filtered_df)} 台</p>",
-    unsafe_allow_html=True,
-)
+# 3. 差枚グラフの描画（Streamlit標準のバーチャート）
+if not filtered_df.empty:
+    st.markdown(
+        "<p style='color: #ff6600; font-size:13px;'>// 差枚数ビジュアライズ</p>",
+        unsafe_allow_html=True,
+    )
+    chart_data = filtered_df.set_index("台番")["差枚数"]
+    st.bar_chart(chart_data, color="#ff6600")
 
+    # 4. 1台ごとのカード形式（強弱・詳細）表示
+    st.markdown(
+        "<p style='color: #ff6600; font-size:13px; margin-top:15px;'>// 1台別 詳細カード</p>",
+        unsafe_allow_html=True,
+    )
 
-# 3. 差枚グラフの簡易テキスト表現（プラスなら📈、マイナスなら📉）
-def add_graph_emoji(val):
-    if val >= 3000:
-        return f"{val:+d}枚 🚀"
-    elif val >= 1000:
-        return f"{val:+d}枚 📈"
+    for _, row in filtered_df.iterrows():
+        # 強弱に応じたカラーバリエーション
+        badge_color = (
+            "#ff9999"
+            if "強" in row["強弱判定"]
+            else ("#ffeb99" if "中" in row["強弱判定"] else "#99ccff")
+        )
+
+        st.markdown(
+            f"""
+        <div class="unit-card">
+            <div class="unit-header">台番: {row["台番"]} [ {row["機種名"]} ]</div>
+            <div class="unit-info">
+                判定: <span style="color: {badge_color}; font-weight:bold;">{row["強弱判定"]}</span> ｜ 
+                回転数: {row["総回転数"]}G ｜ 
+                差枚: <b style="color: {'#ff6600' if row['差枚数'] > 0 else '#6699ff'};">{row["差枚数"]:+d}枚</b>
+            </div>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+else:
+    st.info("条件に一致するデータがありません。")
